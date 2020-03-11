@@ -294,7 +294,7 @@ void nx_knife_capture_submit(uint8_t but_id)
 bool sys_create_confirm_timeout_timer()
 {
     //create 2s timer to check the timeout of button clicked
-    ConfirmTimeOut_TimerHandle = xTimerCreate("ConfirmTimeOut_TimerHandle", (5000), pdTRUE, NULL, confirm_timeout_timer);
+    ConfirmTimeOut_TimerHandle = xTimerCreate("ConfirmTimeOut_TimerHandle", (10000), pdTRUE, NULL, confirm_timeout_timer);
 
     if (ConfirmTimeOut_TimerHandle == NULL)
     {

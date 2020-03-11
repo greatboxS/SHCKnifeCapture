@@ -15,12 +15,20 @@ void ethernet_handler_task(void *pr);
 void user_handler_task(void *pr);
 
 int CirclePostTime_Ticks = 0;
+int EthernetMaintain_Ticks = 0;
+bool EthernetMaintainNow = false;
 bool DevicePostNow = false;
 /******************************************************************************************/
 void runtime_timer(TimerHandle_t pxTimer)
 {
     pinMode(LED_BUILTIN /* backward compatibility*/, !digitalRead(LED_BUILTIN /* backward compatibility*/));
     CirclePostTime_Ticks++;
+    EthernetMaintain_Ticks++;
+    if (EthernetMaintain_Ticks >= 60 * 30)
+    {
+        EthernetMaintainNow = true;
+        EthernetMaintain_Ticks = 0;
+    }
     if (CirclePostTime_Ticks >= 60 * 5)
     {
         DevicePostNow = true;
@@ -34,69 +42,25 @@ void setup()
     // getting things ready first
     start_up();
 
-    xSemaphore = xQueueCreateCountingSemaphore( ( 3 ), ( 3 ) );
-
-    if (xSemaphore != 
-# 38 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
-                     __null
-# 38 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
-                         )
-    {
-        printf("The semaphore was created successfully\r\n");
-        if (xQueueGenericSend( ( QueueHandle_t ) ( xSemaphore ), 
-# 41 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
-           __null
-# 41 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
-           , ( ( TickType_t ) 0U ), ( ( BaseType_t ) 0 ) ) != ( ( BaseType_t ) 1 ))
-        {
-            // We would expect this call to fail because we cannot give
-            // a semaphore without first "taking" it!
-            printf("Semaphore is free now\r\n");
-        }
-    }
-
-    // create all the task
-    BaseType_t error = xTaskCreatePinnedToCore(main_task, "main_task", 1024 * 100, 
-# 50 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
-                                                                                  __null
-# 50 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
-                                                                                      , 1, 
-# 50 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
-                                                                                           __null
-# 50 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
-                                                                                               , 1);
-    printf("Create main_task code: %d\r\n", error);
-
-    error = xTaskCreatePinnedToCore(user_handler_task, "user_handler_task", 1024 * 20, 
-# 53 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
-                                                                                      __null
-# 53 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
-                                                                                          , 1, 
-# 53 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
-                                                                                               __null
-# 53 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
-                                                                                                   , 0);
-    printf("Create user_handler_task code: %d\r\n", error);
-
     TimerHandle_t Runtime_timer = xTimerCreate("runtime_timer", (1000), ( ( BaseType_t ) 1 ), 
-# 56 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 44 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                                                                __null
-# 56 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 44 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                                                                    , runtime_timer);
 
     if (Runtime_timer == 
-# 58 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 46 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                         __null
-# 58 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 46 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                             )
     {
     }
     else
     {
         if (xTimerGenericCommand( ( Runtime_timer ), ( ( BaseType_t ) 1 ), ( xTaskGetTickCount() ), 
-# 63 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 51 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
            __null
-# 63 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 51 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
            , ( 0 ) ) != ( ( ( BaseType_t ) 1 ) ))
         {
             printf("Can not start request timer\r\n");
@@ -108,7 +72,49 @@ void setup()
     sys_create_request_timeout_timer();
     sys_create_confirm_timeout_timer();
 
-    knife_capture.checking_reset_counter_request();
+    xSemaphore = xQueueCreateCountingSemaphore( ( 3 ), ( 3 ) );
+
+    if (xSemaphore != 
+# 64 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                     __null
+# 64 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                         )
+    {
+        printf("The semaphore was created successfully\r\n");
+        if (xQueueGenericSend( ( QueueHandle_t ) ( xSemaphore ), 
+# 67 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+           __null
+# 67 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+           , ( ( TickType_t ) 0U ), ( ( BaseType_t ) 0 ) ) != ( ( BaseType_t ) 1 ))
+        {
+            // We would expect this call to fail because we cannot give
+            // a semaphore without first "taking" it!
+            printf("Semaphore is free now\r\n");
+        }
+    }
+
+    // create all the task
+    BaseType_t error = xTaskCreatePinnedToCore(main_task, "main_task", 1024 * 100, 
+# 76 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                                                                                  __null
+# 76 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                                                                                      , 1, 
+# 76 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                                                                                           __null
+# 76 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                                                                                               , 1);
+    printf("Create main_task code: %d\r\n", error);
+
+    error = xTaskCreatePinnedToCore(user_handler_task, "user_handler_task", 1024 * 20, 
+# 79 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                                                                                      __null
+# 79 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                                                                                          , 1, 
+# 79 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                                                                                               __null
+# 79 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                                                                                                   , 0);
+    printf("Create user_handler_task code: %d\r\n", error);
 }
 
 /******************************************************************************************/
@@ -116,9 +122,9 @@ void loop()
 {
     // all the things are done in tasks
     vTaskSuspend(
-# 81 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 87 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                 __null
-# 81 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 87 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                     ); // stop this task
 }
 
@@ -126,9 +132,9 @@ void loop()
 void ethernet_handler_task(void *pr)
 {
     if (xQueueGenericReceive( ( QueueHandle_t ) ( xSemaphore ), 
-# 87 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 93 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
        __null
-# 87 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 93 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
        , ( (TickType_t)0 ), ( ( BaseType_t ) 0 ) ))
     {
         printf("ethernet_handler_task has taken the semaphored, semaphore value: %d\r\n", uxQueueMessagesWaiting( ( QueueHandle_t ) ( xSemaphore ) ));
@@ -137,9 +143,9 @@ void ethernet_handler_task(void *pr)
 
         vTaskDelete(RequestTaskHandle);
         if (xQueueGenericSend( ( QueueHandle_t ) ( xSemaphore ), 
-# 94 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 100 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
            __null
-# 94 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 100 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
            , ( ( TickType_t ) 0U ), ( ( BaseType_t ) 0 ) ) == ( ( BaseType_t ) 1 ))
         {
             printf("ethernet_handler_task has given the semaphored\r\n");
@@ -155,9 +161,9 @@ void user_handler_task(void *pr)
     for (;;)
     {
         if (xQueueGenericReceive( ( QueueHandle_t ) ( xSemaphore ), 
-# 108 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 114 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
            __null
-# 108 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 114 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
            , ( (TickType_t)0 ), ( ( BaseType_t ) 0 ) ))
         {
             //printf("user_handler_task has taken the semaphored, semaphore value: %d\r\n",
@@ -173,9 +179,9 @@ void user_handler_task(void *pr)
             }
 
             xQueueGenericSend( ( QueueHandle_t ) ( xSemaphore ), 
-# 122 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 128 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
            __null
-# 122 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 128 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
            , ( ( TickType_t ) 0U ), ( ( BaseType_t ) 0 ) );
         }
 
@@ -188,26 +194,37 @@ void main_task(void *pr)
 {
     for (;;)
     {
-        if (!InitializeFinish && InitialTimes > 0)
+        if (!InitializeFinish && InitialTimes > 0 && !knife_capture.sys_requesting)
         {
-            if (InitialRequestNow)
+            InitialTimes--;
+            printf("Retry to initializes the device\r\n");
+
+            if (RequestTimeOut_TimerHandle == 
+# 145 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                                             __null
+# 145 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                                                 )
             {
-                InitialTimes--;
-                printf("Retry to initializes the device\r\n");
-                InitialRequestNow = false;
+                if (!sys_create_request_timeout_timer())
+                {
+                    knife_capture.checking_reset_counter_request();
+                }
+            }
+            else
+            {
                 xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 2 ), ( xTaskGetTickCount() ), 
-# 141 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 154 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                __null
-# 141 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 154 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                , ( (TickType_t)0 ) );
                 knife_capture.checking_reset_counter_request();
             }
         }
 
         if (xQueueGenericReceive( ( QueueHandle_t ) ( xSemaphore ), 
-# 146 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 159 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
            __null
-# 146 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 159 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
            , ( (TickType_t)0 ), ( ( BaseType_t ) 0 ) ))
         {
             //printf("main_task has taken the semaphored, semaphore value: %d\r\n",
@@ -217,14 +234,13 @@ void main_task(void *pr)
 
             // ethernet_waiting for data coming in
             //knife_capture.ethernet_handle.running();
-
             main_task_callback_func();
         }
 
         xQueueGenericSend( ( QueueHandle_t ) ( xSemaphore ), 
-# 159 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 171 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
        __null
-# 159 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 171 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
        , ( ( TickType_t ) 0U ), ( ( BaseType_t ) 0 ) );
 
         vTaskDelay(2);
@@ -245,17 +261,23 @@ inline void user_handler_task_callback_func()
         DevicePostNow = false;
         knife_capture.local_device_post_data();
     }
+
+    if (EthernetMaintainNow)
+    {
+        EthernetMaintainNow = false;
+        knife_capture.ethernet_handle.ethernet_maintain();
+    }
 }
 
 inline void ethernet_handler_task_callback_fnc()
 {
-    printf("\r\n[USER_DEBUG] ----> Func: %s at line: %d\r\n", __func__, 183);
+    printf("\r\n[USER_DEBUG] ----> Func: %s at line: %d\r\n", __func__, 201);
     // if create timer success, then make new request
 
     if (RequestTimeOut_TimerHandle == 
-# 186 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 204 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                      __null
-# 186 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 204 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                          )
     {
         if (!sys_create_request_timeout_timer())
@@ -265,9 +287,9 @@ inline void ethernet_handler_task_callback_fnc()
                 printf("Connect to server failed\r\n");
 
                 BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 3 ), 0U, 
-# 194 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 212 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                  __null
-# 194 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 212 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                  , ( (TickType_t)0 ) );
                 printf("Stop request waiting timer, Excp code: %d\r\n", excp);
             }
@@ -275,15 +297,15 @@ inline void ethernet_handler_task_callback_fnc()
     }
 
     if (RequestTimeOut_TimerHandle != 
-# 200 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 218 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                      __null
-# 200 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 218 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                          )
     {
         BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 2 ), ( xTaskGetTickCount() ), 
-# 202 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 220 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                          __null
-# 202 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 220 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                          , ( (TickType_t)0 ) );
         printf("Reset request waiting timer, Excp code: %d\r\n", excp);
         if (!knife_capture.ethernet_request_next())
@@ -291,9 +313,9 @@ inline void ethernet_handler_task_callback_fnc()
             printf("Connect to server failed\r\n");
 
             BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 3 ), 0U, 
-# 208 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 226 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                              __null
-# 208 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 226 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                              , ( (TickType_t)0 ) );
             printf("Stop request waiting timer, Excp code: %d\r\n", excp);
         }
@@ -310,21 +332,21 @@ inline void main_task_callback_func()
         //     ethernet_handler_task, "ethernet_handler_task", 1024 * 20, NULL, 1, &RequestTaskHandle, 1);
         // printf("Create ethernet_handler_task code: %d\r\n", error);
         if (RequestTimeOut_TimerHandle == 
-# 223 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 241 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                          __null
-# 223 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 241 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                              )
         {
             if (!sys_create_request_timeout_timer())
             {
-                if (!knife_capture.ethernet_request_next())
+                if (!knife_capture.ethernet_post_capture())
                 {
                     printf("Connect to server failed\r\n");
 
                     BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 3 ), 0U, 
-# 231 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 249 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                      __null
-# 231 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 249 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                      , ( (TickType_t)0 ) );
                     printf("Stop request waiting timer, Excp code: %d\r\n", excp);
                 }
@@ -332,25 +354,25 @@ inline void main_task_callback_func()
         }
 
         if (RequestTimeOut_TimerHandle != 
-# 237 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 255 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                          __null
-# 237 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 255 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                              )
         {
             BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 2 ), ( xTaskGetTickCount() ), 
-# 239 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 257 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                              __null
-# 239 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 257 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                              , ( (TickType_t)0 ) );
             printf("Reset request waiting timer, Excp code: %d\r\n", excp);
-            if (!knife_capture.ethernet_request_next())
+            if (!knife_capture.ethernet_post_capture())
             {
                 printf("Connect to server failed\r\n");
 
                 BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 3 ), 0U, 
-# 245 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 263 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                                  __null
-# 245 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 263 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                                  , ( (TickType_t)0 ) );
                 printf("Stop request waiting timer, Excp code: %d\r\n", excp);
             }
@@ -360,7 +382,7 @@ inline void main_task_callback_func()
 
 void ethernet_data_received_callback(EthernetClient &stream)
 {
-    printf("\r\n[USER_DEBUG] ----> Func: %s at line: %d\r\n", __func__, 254);
+    printf("\r\n[USER_DEBUG] ----> Func: %s at line: %d\r\n", __func__, 272);
     int receivedBytes = stream.available();
     memset(knife_capture.http_header.buf, 0, sizeof(knife_capture.http_header.buf));
     stream.readBytesUntil('\r\n', knife_capture.http_header.buf, receivedBytes);
@@ -372,31 +394,45 @@ void ethernet_data_received_callback(EthernetClient &stream)
     {
         printf("response: Success\n\n");
         printf(knife_capture.http_header.buf);
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
     }
 
     if (strstr(knife_capture.http_header.buf, "404 Not Found") != nullptr)
     {
         printf("response: Not Found\n\n");
         printf(knife_capture.http_header.buf);
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
     }
 
     if (strstr(knife_capture.http_header.buf, "400 Bad Request") != nullptr)
     {
         printf("response: Bad Request\n\n");
         printf(knife_capture.http_header.buf);
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
     }
 
     if (strstr(knife_capture.http_header.buf, "{") != nullptr)
     {
         printf("new data is comming\r\n");
-        DynamicJsonDocument json_doc = DynamicJsonDocument(1024 * 3);
+        DynamicJsonDocument json_doc = DynamicJsonDocument(1024 * 2);
         DeserializationError JsonErr = deserializeJson(json_doc, knife_capture.http_header.buf);
-        printf("parse json object coed: %s\r\n", JsonErr.c_str());
+        printf("parse json object code: %s\r\n", JsonErr.c_str());
+
+        if (strstr(knife_capture.http_header.buf, "knife_capture") != 
+# 311 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+                                                                     __null
+# 311 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+                                                                         )
+        {
+            if (knife_capture.knife_capture_submit)
+                knife_capture.knife_capture_submit = false;
+        }
 
         if (!JsonErr)
         {
-            InitializeFinish = true;
-
             String eop = json_doc.getMember("EOP").as<const char *>();
             char mesg[100]{0};
             String CurrentTime = "";
@@ -416,11 +452,12 @@ void ethernet_data_received_callback(EthernetClient &stream)
                 printf("Post local data\r\n");
                 knife_capture.local_device_post_data();
 
-                knife_capture.knife_capture_submit=false;
+                knife_capture.knife_capture_submit = false;
             }
 
             if (eop == "kc_initial") // initial resp
             {
+                InitializeFinish = true;
                 printf("Reviced new Json data\r\n");
                 CurrentTime = json_doc.getMember("CurrentTime").as<const char *>();
                 snprintf(mesg, sizeof(mesg), "Last initializes time: %s", CurrentTime.c_str());
@@ -445,9 +482,9 @@ void ethernet_data_received_callback(EthernetClient &stream)
     printf("Stop request timer\r\n");
     knife_capture.sys_requesting = false;
     BaseType_t excp = xTimerGenericCommand( ( RequestTimeOut_TimerHandle ), ( ( BaseType_t ) 3 ), 0U, 
-# 338 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
+# 367 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino" 3 4
                      __null
-# 338 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+# 367 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
                      , ( (TickType_t)0 ) );
     printf("Stop request timeout timer, Excp code: %d\r\n", excp);
 }

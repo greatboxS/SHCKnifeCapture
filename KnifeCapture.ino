@@ -14,12 +14,20 @@ void ethernet_handler_task(void *pr);
 void user_handler_task(void *pr);
 
 int CirclePostTime_Ticks = 0;
+int EthernetMaintain_Ticks = 0;
+bool EthernetMaintainNow = false;
 bool DevicePostNow = false;
 /******************************************************************************************/
 void runtime_timer(TimerHandle_t pxTimer)
 {
     pinMode(BUILTIN_LED, !digitalRead(BUILTIN_LED));
     CirclePostTime_Ticks++;
+    EthernetMaintain_Ticks++;
+    if (EthernetMaintain_Ticks >= 60 * 30)
+    {
+        EthernetMaintainNow = true;
+        EthernetMaintain_Ticks = 0;
+    }
     if (CirclePostTime_Ticks >= 60 * 5)
     {
         DevicePostNow = true;
@@ -32,6 +40,24 @@ void setup()
 {
     // getting things ready first
     start_up();
+
+    TimerHandle_t Runtime_timer = xTimerCreate("runtime_timer", (1000), pdTRUE, NULL, runtime_timer);
+
+    if (Runtime_timer == NULL)
+    {
+    }
+    else
+    {
+        if (xTimerStart(Runtime_timer, 0) != pdPASS)
+        {
+            printf("Can not start request timer\r\n");
+        }
+        else
+            printf("start request timer successfully\r\n");
+    }
+
+    sys_create_request_timeout_timer();
+    sys_create_confirm_timeout_timer();
 
     xSemaphore = xSemaphoreCreateCounting(3, 3);
 
@@ -52,26 +78,6 @@ void setup()
 
     error = xTaskCreatePinnedToCore(user_handler_task, "user_handler_task", 1024 * 20, NULL, 1, NULL, 0);
     printf("Create user_handler_task code: %d\r\n", error);
-
-    TimerHandle_t Runtime_timer = xTimerCreate("runtime_timer", (1000), pdTRUE, NULL, runtime_timer);
-
-    if (Runtime_timer == NULL)
-    {
-    }
-    else
-    {
-        if (xTimerStart(Runtime_timer, 0) != pdPASS)
-        {
-            printf("Can not start request timer\r\n");
-        }
-        else
-            printf("start request timer successfully\r\n");
-    }
-
-    sys_create_request_timeout_timer();
-    sys_create_confirm_timeout_timer();
-
-    knife_capture.checking_reset_counter_request();
 }
 
 /******************************************************************************************/
@@ -131,13 +137,20 @@ void main_task(void *pr)
 {
     for (;;)
     {
-        if (!InitializeFinish && InitialTimes > 0)
+        if (!InitializeFinish && InitialTimes > 0 && !knife_capture.sys_requesting)
         {
-            if (InitialRequestNow)
+            InitialTimes--;
+            printf("Retry to initializes the device\r\n");
+
+            if (RequestTimeOut_TimerHandle == NULL)
             {
-                InitialTimes--;
-                printf("Retry to initializes the device\r\n");
-                InitialRequestNow = false;
+                if (!sys_create_request_timeout_timer())
+                {
+                    knife_capture.checking_reset_counter_request();
+                }
+            }
+            else
+            {
                 xTimerReset(RequestTimeOut_TimerHandle, (TickType_t)0);
                 knife_capture.checking_reset_counter_request();
             }
@@ -152,7 +165,6 @@ void main_task(void *pr)
 
             // ethernet_waiting for data coming in
             //knife_capture.ethernet_handle.running();
-
             main_task_callback_func();
         }
 
@@ -175,6 +187,12 @@ inline void user_handler_task_callback_func()
         printf("Post local data now\r\n");
         DevicePostNow = false;
         knife_capture.local_device_post_data();
+    }
+
+    if (EthernetMaintainNow)
+    {
+        EthernetMaintainNow = false;
+        knife_capture.ethernet_handle.ethernet_maintain();
     }
 }
 
@@ -224,7 +242,7 @@ inline void main_task_callback_func()
         {
             if (!sys_create_request_timeout_timer())
             {
-                if (!knife_capture.ethernet_request_next())
+                if (!knife_capture.ethernet_post_capture())
                 {
                     printf("Connect to server failed\r\n");
 
@@ -238,7 +256,7 @@ inline void main_task_callback_func()
         {
             BaseType_t excp = xTimerReset(RequestTimeOut_TimerHandle, (TickType_t)0);
             printf("Reset request waiting timer, Excp code: %d\r\n", excp);
-            if (!knife_capture.ethernet_request_next())
+            if (!knife_capture.ethernet_post_capture())
             {
                 printf("Connect to server failed\r\n");
 
@@ -263,31 +281,41 @@ void ethernet_data_received_callback(EthernetClient &stream)
     {
         printf("response: Success\n\n");
         printf(knife_capture.http_header.buf);
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
     }
 
     if (strstr(knife_capture.http_header.buf, "404 Not Found") != nullptr)
     {
         printf("response: Not Found\n\n");
         printf(knife_capture.http_header.buf);
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
     }
 
     if (strstr(knife_capture.http_header.buf, "400 Bad Request") != nullptr)
     {
         printf("response: Bad Request\n\n");
         printf(knife_capture.http_header.buf);
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
     }
 
     if (strstr(knife_capture.http_header.buf, "{") != nullptr)
     {
         printf("new data is comming\r\n");
-        DynamicJsonDocument json_doc = DynamicJsonDocument(1024 * 3);
+        DynamicJsonDocument json_doc = DynamicJsonDocument(1024 * 2);
         DeserializationError JsonErr = deserializeJson(json_doc, knife_capture.http_header.buf);
-        printf("parse json object coed: %s\r\n", JsonErr.c_str());
+        printf("parse json object code: %s\r\n", JsonErr.c_str());
+
+        if (strstr(knife_capture.http_header.buf, "knife_capture") != NULL)
+        {
+            if (knife_capture.knife_capture_submit)
+                knife_capture.knife_capture_submit = false;
+        }
 
         if (!JsonErr)
         {
-            InitializeFinish = true;
-
             String eop = json_doc.getMember("EOP").as<const char *>();
             char mesg[100]{0};
             String CurrentTime = "";
@@ -307,11 +335,12 @@ void ethernet_data_received_callback(EthernetClient &stream)
                 printf("Post local data\r\n");
                 knife_capture.local_device_post_data();
 
-                knife_capture.knife_capture_submit=false;
+                knife_capture.knife_capture_submit = false;
             }
 
             if (eop == "kc_initial") // initial resp
             {
+                InitializeFinish = true;
                 printf("Reviced new Json data\r\n");
                 CurrentTime = json_doc.getMember("CurrentTime").as<const char *>();
                 snprintf(mesg, sizeof(mesg), "Last initializes time: %s", CurrentTime.c_str());

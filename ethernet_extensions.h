@@ -25,9 +25,9 @@ private:
     char Host[32] = "Host: 10.4.3.41:32765";
     const char *ConnectionClose = "Connection: close";
     const char *ConnectionAlive = "Connection: keep-alive";
-    const char *CashControl = "Cache-Control: max-age=0";
-    const char *UpgradeInsecure = "Upgrade-Insecure-Requests: 1";
-    const char *UserAgent = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36";
+    //const char *CashControl = "Cache-Control: max-age=0";
+    //const char *UpgradeInsecure = "Upgrade-Insecure-Requests: 1";
+    //const char *UserAgent = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36";
     int Storage_address;
     int eeprom_server_ip_addr = 0;
     int eeprom_port_addr = 0;
@@ -182,13 +182,44 @@ public:
         ethernet_make_url(request_url, HTTP_GET);
         client.println(Url.c_str());
         client.println(Host);
-        client.println(ConnectionAlive);
-        client.println(CashControl);
-        client.println(UpgradeInsecure);
-        client.println(UserAgent);
+        client.println(ConnectionClose);
+        // client.println(CashControl);
+        // client.println(UpgradeInsecure);
+        // client.println(UserAgent);
         client.println();
 
         printf("Request url: %s,  %s\r\n", Url.c_str(), Host);
+    }
+
+    void ethernet_send_request(EthernetClient &client, char *request_url, char *data, uint8_t method)
+    {
+        function_log(ethernet_extension.h);
+        ethernet_make_url(request_url, method);
+        client.println(Url.c_str());
+        client.println(Host);
+        client.println(ConnectionClose);
+        // client.println(CashControl);
+        // client.println(UpgradeInsecure);
+        // client.println(UserAgent);
+
+        printf("Request url: %s,  %s\r\n", Url.c_str(), Host);
+
+        if (data != NULL)
+        {
+            char temp[32]{0};
+            int length = strlen(data);
+            snprintf(temp, sizeof(temp), "Content-Length: %d", length);
+            client.println("Content-Type: application/json");
+            client.println(temp);
+            client.println();
+            client.println(data);
+
+            printf("Post data: %s\r\n", data);
+        }
+        else
+        {
+            client.println();
+        }
     }
 
     void ethernet_post(EthernetClient &client, char *url, char *data)
@@ -201,10 +232,10 @@ public:
         //
         client.println(Url.c_str());
         client.println(Host);
-        client.println(ConnectionAlive);
-        client.println(CashControl);
-        client.println(UpgradeInsecure);
-        client.println(UserAgent);
+        client.println(ConnectionClose);
+        // client.println(CashControl);
+        // client.println(UpgradeInsecure);
+        // client.println(UserAgent);
         client.println("Content-Type: application/json");
         client.println(temp);
         client.println();

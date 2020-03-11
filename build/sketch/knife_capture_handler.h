@@ -22,9 +22,9 @@ public:
     int knife_position = 0;
     int machine_slot = 0;
     int knife_type = 0;
-    int knife_picker=0;
+    int knife_picker = 0;
     volatile bool submit_recheck_flag = false;
-    bool knife_capture_submit=false;
+    bool knife_capture_submit = false;
 
     std::queue<request_def> request_list;
 
@@ -42,7 +42,7 @@ public:
 
     bool ethernet_queue_available()
     {
-        return (request_list.size() && !sys_requesting && !knife_capture_submit);
+        return (request_list.size() > 0 && !sys_requesting && !knife_capture_submit);
     }
 
     // result: @1 = successed
@@ -69,7 +69,7 @@ public:
             return 0;
         }
 
-        nex_send_message("Updateed Successfully");
+        nex_send_message("Updated Successfully");
         request_list.push(new_request);
         // success
         return 1;
@@ -94,6 +94,10 @@ public:
     bool ethernet_request_next()
     {
         function_log();
+
+        if (!ethernet_handle.cable_connected)
+            return false;
+
         request_list.front().retry_time--;
         if (request_list.front().retry_time < 0)
         {
@@ -105,7 +109,34 @@ public:
         {
             ethernet_handle.ethernet_pr.ethernet_send_request(ethernet_handle.client, request_list.front().url, HTTP_GET);
             sys_requesting = true;
-            knife_capture_submit=true;
+            knife_capture_submit = true;
+            printf("Sent new request successfull\r\n");
+            return true;
+        }
+        else
+        {
+            printf("Connect to server failed\r\n");
+            return false;
+        }
+        return false;
+    }
+
+    bool ethernet_post_capture()
+    {
+        function_log();
+
+        request_list.front().retry_time--;
+        if (request_list.front().retry_time < 0)
+        {
+            printf("Request failed after retry\r\n");
+            request_list.pop();
+        }
+
+        if (ethernet_handle.start_connect_to_server())
+        {
+            ethernet_handle.ethernet_pr.ethernet_send_request(ethernet_handle.client, request_list.front().url, request_list.front().data, HTTP_POST);
+            sys_requesting = true;
+            knife_capture_submit = true;
             printf("Sent new request successfull\r\n");
             return true;
         }
@@ -380,6 +411,9 @@ public:
     void local_device_post_data()
     {
         function_log();
+        if (!ethernet_handle.cable_connected)
+            return;
+
         printf("Post all local data to server\r\n");
         serialize_local_data();
         char post_url[32]{0};

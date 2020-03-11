@@ -139,7 +139,8 @@ struct request_def
     int knife_type = 0;     //0old 1new
     int retry_time = 5;
     int knife_picked = 0;
-    char url[64]{0};
+    char url[32]{0};
+    char data[128]{0};
     bool valid = false;
     void clear()
     {
@@ -151,7 +152,7 @@ struct request_def
         valid = false;
     }
 
-    void update_request_pr(char *name, int device_id, int pos, int type,int knife_picker, int local_value )
+    void update_request_pr(char *name, int device_id, int pos, int type, int knife_picker, int local_value)
     {
         function_log();
 
@@ -163,7 +164,18 @@ struct request_def
         knife_picked = knife_picker;
         // submit type
         // machine_name/knife_position/knife_type/knife_picked/local_value
-        snprintf(url, sizeof(url), "kc_api/%s/%d/%d/%d/%d/%d", machine_name, device_id, knife_position, knife_type, knife_picked, local_value);
+        DynamicJsonDocument jsondoc = DynamicJsonDocument(1024);
+        jsondoc["MachineName"] = machine_name;
+        jsondoc["DeviceId"] = device_id;
+        jsondoc["KPos"] = pos;
+        jsondoc["KType"] = type;
+        jsondoc["KnifePicked"] = knife_picker;
+        jsondoc["LocalValue"] = local_value;
+        serializeJson(jsondoc, data, sizeof(data));
+
+        snprintf(url, sizeof(url), "kc_api/capture");
+
+        //snprintf(url, sizeof(url), "kc_api/%s/%d/%d/%d/%d/%d", machine_name, device_id, knife_position, knife_type, knife_picked, local_value);
         printf("update new url: %s\rn", url);
     }
 };

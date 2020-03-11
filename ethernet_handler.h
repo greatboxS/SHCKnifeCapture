@@ -80,7 +80,7 @@ public:
         // IPAddress debug_ip(192, 168, 0, 2);
         // Ethernet.begin(ethernet_pr.MAC, debug_ip);
         // return 1;
-        int exception = Ethernet.begin(ethernet_pr.MAC);
+        int exception = Ethernet.begin(ethernet_pr.MAC, 20000);
 
         if (exception == 0)
         {
@@ -221,6 +221,11 @@ public:
 
         ethernet_pr.ethernet_post(client, url, data);
         return true;
+    }
+
+    void ethernet_maintain()
+    {
+        Ethernet.maintain();
     }
 };
 
