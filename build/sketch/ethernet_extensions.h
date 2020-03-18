@@ -17,17 +17,9 @@ typedef enum HttpMethod_t
 struct ethernet_pa_def
 {
 private:
-    const char *GetUrl = "GET /%s HTTP/1.1";
-    const char *PostUrl = "POST /%s HTTP/1.1";
-    const char *PutUrl = "PUT /%s HTTP/1.1";
-    const char *DeletetUrl = "DELETE /%s HTTP/1.1";
-    String Url;
+    char RootUrl[256];
     char Host[32] = "Host: 10.4.3.41:32765";
     const char *ConnectionClose = "Connection: close";
-    const char *ConnectionAlive = "Connection: keep-alive";
-    //const char *CashControl = "Cache-Control: max-age=0";
-    //const char *UpgradeInsecure = "Upgrade-Insecure-Requests: 1";
-    //const char *UserAgent = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36";
     int Storage_address;
     int eeprom_server_ip_addr = 0;
     int eeprom_port_addr = 0;
@@ -103,7 +95,7 @@ public:
         function_log(ethernet_extension.h);
         printf("Initializes ethernet parameter\r\n");
         Storage_address = storage_address;
-        Url.reserve(128);
+        memset(RootUrl, 0, sizeof(RootUrl));
         storage_address_specify();
     }
 
@@ -123,86 +115,69 @@ public:
         eeprom_read_MAC();
     }
 
-    void ethernet_make_url(char *_ext, uint8_t method)
+    void ethernet_make_url(char *url, uint8_t method)
     {
         function_log(ethernet_extension.h);
-        Url.remove(0, Url.length());
-
+        memset(RootUrl, 0, sizeof(RootUrl));
         switch (method)
         {
         case HTTP_GET:
-            Url = GetUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "GET /%s HTTP/1.1", url);
             break;
         case HTTP_POST:
-            Url = PostUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "POST /%s HTTP/1.1", url);
             break;
         case HTTP_PUT:
-            Url = PutUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "PUT /%s HTTP/1.1", url);
             break;
         case HTTP_DELETE:
-            Url = DeletetUrl;
-            break;
-        default:
-            Url = GetUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "DELETE /%s HTTP/1.1", url);
             break;
         }
-
-        Url.replace("%s", _ext);
     }
 
-    void ethernet_make_url(const String &_ext, uint8_t method)
+    void ethernet_make_url(const String &url, uint8_t method)
     {
         function_log(ethernet_extension.h);
-        Url.remove(0, Url.length());
+        memset(RootUrl, 0, sizeof(RootUrl));
         switch (method)
         {
         case HTTP_GET:
-            Url = GetUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "GET /%s HTTP/1.1", url.c_str());
             break;
         case HTTP_POST:
-            Url = PostUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "POST /%s HTTP/1.1", url.c_str());
             break;
         case HTTP_PUT:
-            Url = PutUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "PUT /%s HTTP/1.1", url.c_str());
             break;
         case HTTP_DELETE:
-            Url = DeletetUrl;
-            break;
-        default:
-            Url = GetUrl;
+            snprintf(RootUrl, sizeof(RootUrl), "DELETE /%s HTTP/1.1", url.c_str());
             break;
         }
-
-        Url.replace("%s", _ext);
     }
 
     void ethernet_send_request(EthernetClient &client, char *request_url, uint8_t method)
     {
         function_log(ethernet_extension.h);
         ethernet_make_url(request_url, HTTP_GET);
-        client.println(Url.c_str());
+        client.println(RootUrl);
         client.println(Host);
         client.println(ConnectionClose);
-        // client.println(CashControl);
-        // client.println(UpgradeInsecure);
-        // client.println(UserAgent);
         client.println();
 
-        printf("Request url: %s,  %s\r\n", Url.c_str(), Host);
+        printf("Request url: %s,  %s\r\n", RootUrl, Host);
     }
 
     void ethernet_send_request(EthernetClient &client, char *request_url, char *data, uint8_t method)
     {
         function_log(ethernet_extension.h);
         ethernet_make_url(request_url, method);
-        client.println(Url.c_str());
+        client.println(RootUrl);
         client.println(Host);
         client.println(ConnectionClose);
-        // client.println(CashControl);
-        // client.println(UpgradeInsecure);
-        // client.println(UserAgent);
 
-        printf("Request url: %s,  %s\r\n", Url.c_str(), Host);
+        printf("Request url: %s,  %s\r\n", RootUrl, Host);
 
         if (data != NULL)
         {
@@ -230,18 +205,15 @@ public:
 
         ethernet_make_url(url, HTTP_POST);
         //
-        client.println(Url.c_str());
+        client.println(RootUrl);
         client.println(Host);
         client.println(ConnectionClose);
-        // client.println(CashControl);
-        // client.println(UpgradeInsecure);
-        // client.println(UserAgent);
         client.println("Content-Type: application/json");
         client.println(temp);
         client.println();
         client.println(data);
 
-        printf("Post url %s, %s\r\n", Url.c_str(), Host);
+        printf("Post url %s, %s\r\n", RootUrl, Host);
         printf("Content-Type: application/json\r\n");
         printf(temp);
         printf("Data: %s\r\n", data);
