@@ -140,7 +140,7 @@ struct request_def
     int retry_time = 10;
     int knife_picked = 0;
     char url[32]{0};
-    char data[128*3]{0};
+    char data[1024]{0};
     bool valid = false;
     void clear()
     {
@@ -417,7 +417,7 @@ public:
     {
         function_log();
         memccpy(last_update_time, rec_machine.last_update_time, 0, sizeof(last_update_time));
-        reset_counter = rec_machine.reset_counter;
+        
         eeprom_save_last_update_time();
     }
 

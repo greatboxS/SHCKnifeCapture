@@ -368,15 +368,15 @@ public:
         EEPROM.end();
     }
 
-    void ethernet_parse_all_received_data(JsonDocument &json_doc)
+    void ethernet_parse_all_received_data(JsonDocument &json_doc, bool update_time = false)
     {
         function_log();
         knife_capture_resp.json_parse_resp_data(json_doc);
-        handle_synchronize_data(knife_capture_resp);
+        handle_synchronize_data(knife_capture_resp, update_time);
         nex_goto_page("SCREEN1");
     }
 
-    void handle_synchronize_data(knife_capture_resp_info &resp_data)
+    void handle_synchronize_data(knife_capture_resp_info &resp_data, bool update_time)
     {
         for (size_t i = 0; i < resp_data.machines.size(); i++)
         {
@@ -385,11 +385,11 @@ public:
                 if (machine_handle.machines[k] == resp_data.machines[i].machine_name)
                 {
                     // update mached machine
-                    machine_handle.machines[k].set_update_time(resp_data.machines[i]);
-                    // if (!machine_handle.machines[i].checking_data_from_server(resp_data.machines[i]))
-                    // {
-                    //     nex_send_message("Received data different from local data");
-                    // }
+                    if (update_time)
+                        machine_handle.machines[k].set_update_time(resp_data.machines[i]);
+
+                    machine_handle.machines[k].reset_counter = resp_data.machines[i].reset_counter;
+
                     printf("Reset machine counter now\r\n");
                     machine_reset_counter();
                     break;

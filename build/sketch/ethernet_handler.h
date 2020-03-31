@@ -141,7 +141,10 @@ public:
         if (reset_module_now)
         {
             reset_module_now = false;
-            setting_up_ethernet_module();
+            if (got_ip)
+                resetup_ethernet_module();
+            else
+                setting_up_ethernet_module();
         }
     }
 

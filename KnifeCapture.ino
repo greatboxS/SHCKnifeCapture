@@ -166,10 +166,10 @@ void main_task(void *pr)
             // ethernet_waiting for data coming in
             //knife_capture.ethernet_handle.running();
             main_task_callback_func();
+
+            xSemaphoreGive(xSemaphore);
         }
-
-        xSemaphoreGive(xSemaphore);
-
+        
         vTaskDelay(2);
     }
 }
@@ -209,8 +209,8 @@ inline void ethernet_handler_task_callback_fnc()
             {
                 printf("Connect to server failed\r\n");
 
-                BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
-                printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+                //BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
+                //printf("Stop request waiting timer, Excp code: %d\r\n", excp);
                 knife_capture.sys_requesting = false;
             }
         }
@@ -224,9 +224,9 @@ inline void ethernet_handler_task_callback_fnc()
         {
             printf("Connect to server failed\r\n");
 
-            BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
+            //BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
             knife_capture.sys_requesting = false;
-            printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+            //printf("Stop request waiting timer, Excp code: %d\r\n", excp);
         }
     }
 }
@@ -245,8 +245,8 @@ inline void main_task_callback_func()
                 {
                     printf("Connect to server failed\r\n");
 
-                    BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
-                    printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+                    //BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
+                    // printf("Stop request waiting timer, Excp code: %d\r\n", excp);
                     knife_capture.sys_requesting = false;
                 }
             }
@@ -260,8 +260,8 @@ inline void main_task_callback_func()
             {
                 printf("Connect to server failed\r\n");
 
-                BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
-                printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+                //BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
+                //printf("Stop request waiting timer, Excp code: %d\r\n", excp);
                 knife_capture.sys_requesting = false;
             }
         }
@@ -335,7 +335,7 @@ void ethernet_data_received_callback(EthernetClient &stream)
                 snprintf(mesg, sizeof(mesg), "Last request time: %s", CurrentTime.c_str());
                 nex_send_message(mesg);
 
-                knife_capture.ethernet_parse_all_received_data(json_doc);
+                knife_capture.ethernet_parse_all_received_data(json_doc, true);
 
                 printf("Remove request from queue\r\n");
                 if (knife_capture.request_list.size() > 0)
@@ -355,7 +355,7 @@ void ethernet_data_received_callback(EthernetClient &stream)
                 snprintf(mesg, sizeof(mesg), "Last initializes time: %s", CurrentTime.c_str());
                 nex_send_message(mesg);
 
-                knife_capture.ethernet_parse_all_received_data(json_doc);
+                knife_capture.ethernet_parse_all_received_data(json_doc, false);
 
                 printf("Post local data now\r\n");
                 knife_capture.local_device_post_data();
@@ -368,11 +368,15 @@ void ethernet_data_received_callback(EthernetClient &stream)
                 CurrentTime = json_doc.getMember("CurrentTime").as<const char *>();
                 snprintf(mesg, sizeof(mesg), "Last post time: %s", CurrentTime.c_str());
                 nex_send_message(mesg);
+
+                printf("Remove request from queue\r\n");
+                if (knife_capture.request_list.size() > 0)
+                    knife_capture.request_list.pop();
             }
         }
     }
     printf("Stop request timer\r\n");
     knife_capture.sys_requesting = false;
-    BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
-    printf("Stop request timeout timer, Excp code: %d\r\n", excp);
+    //BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
+    //printf("Stop request timeout timer, Excp code: %d\r\n", excp);
 }

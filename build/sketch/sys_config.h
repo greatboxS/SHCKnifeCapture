@@ -355,7 +355,7 @@ void request_timeout_timer(TimerHandle_t pxTimer)
     function_log();
     knife_capture.sys_requesting = false;
     knife_capture.knife_capture_submit = false;
-    xTimerStop(pxTimer, (TickType_t)0);
+    //xTimerStop(pxTimer, (TickType_t)0);
 }
 
 void confirm_timeout_timer(TimerHandle_t pxTimer)
