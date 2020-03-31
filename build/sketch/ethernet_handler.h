@@ -14,6 +14,9 @@ private:
 
     bool reset_module_now = false;
 
+    IPAddress local_ip, dns_ip, gateway_ip, subnet_ip;
+    bool got_ip = false;
+
 public:
     bool cable_connected = false;
     bool module_connected = false;
@@ -56,7 +59,7 @@ public:
         digitalWrite(reset_pin, LOW);
         delay(100);
         digitalWrite(reset_pin, HIGH);
-        delay(1000);
+        delay(3000);
 
         return setting_up_ethernet_module();
     }
@@ -80,7 +83,7 @@ public:
         // IPAddress debug_ip(192, 168, 0, 2);
         // Ethernet.begin(ethernet_pr.MAC, debug_ip);
         // return 1;
-        int exception = Ethernet.begin(ethernet_pr.MAC, 20000);
+        int exception = Ethernet.begin(ethernet_pr.MAC, 5000);
 
         if (exception == 0)
         {
@@ -105,6 +108,13 @@ public:
         }
         else
         {
+            got_ip = true;
+
+            local_ip = Ethernet.localIP();
+            dns_ip = Ethernet.dnsServerIP();
+            gateway_ip = Ethernet.gatewayIP();
+            subnet_ip = Ethernet.subnetMask();
+
             module_connected = true;
             cable_connected = true;
             ip_initialized = true;
@@ -115,6 +125,13 @@ public:
         }
 
         return exception;
+    }
+
+    void resetup_ethernet_module()
+    {
+        Ethernet.init(chip_select_pin);
+        printf("Reinit Ethernet module with static ip\r\n");
+        Ethernet.begin(ethernet_pr.MAC, local_ip, dns_ip, gateway_ip, subnet_ip);
     }
 
     void checking_ethernet_module()
@@ -159,8 +176,14 @@ public:
     bool start_connect_to_server(uint32_t timeout = 10000)
     {
         function_log();
+
         if (client.connected())
             return true;
+
+        if (got_ip)
+            resetup_ethernet_module();
+        else
+            setting_up_ethernet_module();
 
         client.connect(ethernet_pr.ServerIp, ethernet_pr.Port);
         char temp[64];
@@ -190,15 +213,13 @@ public:
     bool make_request_to_server(char *url, uint8_t _method)
     {
         function_log();
-        if (!client.connected())
+
+        if (!start_connect_to_server(1000))
         {
-            if (!start_connect_to_server())
-            {
-                printf("Connect: failed\r\n");
-                return false;
-            }
-            printf("Connect: successed\r\n");
+            printf("Connect: failed\r\n");
+            return false;
         }
+        printf("Connect: successed\r\n");
 
         ethernet_pr.ethernet_send_request(client, url, HTTP_GET);
         return true;
@@ -209,15 +230,13 @@ public:
     bool make_post_to_server(char *url, char *data)
     {
         function_log();
-        if (!client.connected())
+
+        if (!start_connect_to_server(1000))
         {
-            if (!start_connect_to_server())
-            {
-                printf("Connect: failed\r\n");
-                return false;
-            }
-            printf("Connect: successed\r\n");
+            printf("Connect: failed\r\n");
+            return false;
         }
+        printf("Connect: successed\r\n");
 
         ethernet_pr.ethernet_post(client, url, data);
         return true;

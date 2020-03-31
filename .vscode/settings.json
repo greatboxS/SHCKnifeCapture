@@ -22,7 +22,8 @@
         "system_error": "cpp",
         "random": "cpp",
         "limits": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "queue": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

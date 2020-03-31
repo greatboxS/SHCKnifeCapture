@@ -42,7 +42,8 @@ public:
 
     bool ethernet_queue_available()
     {
-        return (request_list.size() > 0 && !sys_requesting && !knife_capture_submit);
+        //printf("request_list.size() %d, sys_requesting %d, knife_capture_submit %d\r\n", request_list.size(), sys_requesting, knife_capture_submit);
+        return (request_list.size() > 0 && !sys_requesting);
     }
 
     // result: @1 = successed
@@ -105,7 +106,7 @@ public:
             request_list.pop();
         }
 
-        if (ethernet_handle.start_connect_to_server())
+        if (ethernet_handle.start_connect_to_server(1000))
         {
             ethernet_handle.ethernet_pr.ethernet_send_request(ethernet_handle.client, request_list.front().url, HTTP_GET);
             sys_requesting = true;
@@ -121,18 +122,52 @@ public:
         return false;
     }
 
+    void local_device_post_data()
+    {
+        function_log();
+        if (!ethernet_handle.cable_connected)
+            return;
+
+        printf("Post all local data to server\r\n");
+        serialize_local_data();
+
+        request_def new_request;
+
+        new_request.update_post_pr("kc_api/post", http_header.buf);
+
+        if (!new_request.valid)
+        {
+            printf("Add new request falied\r\n");
+            nex_send_message("Failed to update current machine parameters");
+            return;
+        }
+
+        // queue is full
+        if (request_list.size() > MAX_QUEUE_LENGTH)
+        {
+            nex_send_message("Request list is full");
+            return;
+        }
+
+        nex_send_message("Updated Successfully");
+        request_list.push(new_request);
+    }
+
     bool ethernet_post_capture()
     {
         function_log();
+        if (request_list.size() <= 0)
+            return false;
 
         request_list.front().retry_time--;
         if (request_list.front().retry_time < 0)
         {
             printf("Request failed after retry\r\n");
-            request_list.pop();
+            if (request_list.size() > 0)
+                request_list.pop();
         }
 
-        if (ethernet_handle.start_connect_to_server())
+        if (ethernet_handle.start_connect_to_server(1000))
         {
             ethernet_handle.ethernet_pr.ethernet_send_request(ethernet_handle.client, request_list.front().url, request_list.front().data, HTTP_POST);
             sys_requesting = true;
@@ -406,19 +441,6 @@ public:
                 }
             }
         }
-    }
-
-    void local_device_post_data()
-    {
-        function_log();
-        if (!ethernet_handle.cable_connected)
-            return;
-
-        printf("Post all local data to server\r\n");
-        serialize_local_data();
-        char post_url[32]{0};
-        memccpy(post_url, "kc_api/post", 0, sizeof(post_url));
-        ethernet_handle.make_post_to_server(post_url, http_header.buf);
     }
 
     void serialize_local_data()

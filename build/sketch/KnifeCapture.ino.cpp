@@ -26,7 +26,7 @@ void runtime_timer(TimerHandle_t pxTimer);
 void setup();
 #line 84 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
 void loop();
-#line 270 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
+#line 271 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
 void ethernet_data_received_callback(EthernetClient &stream);
 #line 21 "e:\\Visual Code\\KnifeCapture\\KnifeCapture.ino"
 void runtime_timer(TimerHandle_t pxTimer)
@@ -148,7 +148,7 @@ void main_task(void *pr)
 {
     for (;;)
     {
-        if (!InitializeFinish && InitialTimes > 0 && !knife_capture.sys_requesting)
+        if (!InitializeFinish && !knife_capture.sys_requesting)
         {
             InitialTimes--;
             printf("Retry to initializes the device\r\n");
@@ -222,6 +222,7 @@ inline void ethernet_handler_task_callback_fnc()
 
                 BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
                 printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+                knife_capture.sys_requesting = false;
             }
         }
     }
@@ -235,6 +236,7 @@ inline void ethernet_handler_task_callback_fnc()
             printf("Connect to server failed\r\n");
 
             BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
+            knife_capture.sys_requesting = false;
             printf("Stop request waiting timer, Excp code: %d\r\n", excp);
         }
     }
@@ -246,9 +248,6 @@ inline void main_task_callback_func()
     // if ethernet queue exsit, create new request task
     if (knife_capture.ethernet_queue_available())
     {
-        // BaseType_t error = xTaskCreatePinnedToCore(
-        //     ethernet_handler_task, "ethernet_handler_task", 1024 * 20, NULL, 1, &RequestTaskHandle, 1);
-        // printf("Create ethernet_handler_task code: %d\r\n", error);
         if (RequestTimeOut_TimerHandle == NULL)
         {
             if (!sys_create_request_timeout_timer())
@@ -259,6 +258,7 @@ inline void main_task_callback_func()
 
                     BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
                     printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+                    knife_capture.sys_requesting = false;
                 }
             }
         }
@@ -273,6 +273,7 @@ inline void main_task_callback_func()
 
                 BaseType_t excp = xTimerStop(RequestTimeOut_TimerHandle, (TickType_t)0);
                 printf("Stop request waiting timer, Excp code: %d\r\n", excp);
+                knife_capture.sys_requesting = false;
             }
         }
     }
@@ -284,14 +285,21 @@ void ethernet_data_received_callback(EthernetClient &stream)
     int receivedBytes = stream.available();
     memset(knife_capture.http_header.buf, 0, sizeof(knife_capture.http_header.buf));
     stream.readBytesUntil('\r\n', knife_capture.http_header.buf, receivedBytes);
-    bool read_data = false;
 
-    printf("New data received: %s", knife_capture.http_header.buf);
+    printf("New data received: %s\r\n", knife_capture.http_header.buf);
 
     if (strstr(knife_capture.http_header.buf, "200 OK") != nullptr)
     {
         printf("response: Success\n\n");
-        printf(knife_capture.http_header.buf);
+
+        if (knife_capture.knife_capture_submit)
+            knife_capture.knife_capture_submit = false;
+    }
+
+    if (strstr(knife_capture.http_header.buf, "Access denied") != nullptr)
+    {
+        printf("response: Access denied\n\n");
+
         if (knife_capture.knife_capture_submit)
             knife_capture.knife_capture_submit = false;
     }
@@ -299,7 +307,7 @@ void ethernet_data_received_callback(EthernetClient &stream)
     if (strstr(knife_capture.http_header.buf, "404 Not Found") != nullptr)
     {
         printf("response: Not Found\n\n");
-        printf(knife_capture.http_header.buf);
+
         if (knife_capture.knife_capture_submit)
             knife_capture.knife_capture_submit = false;
     }
@@ -307,7 +315,7 @@ void ethernet_data_received_callback(EthernetClient &stream)
     if (strstr(knife_capture.http_header.buf, "400 Bad Request") != nullptr)
     {
         printf("response: Bad Request\n\n");
-        printf(knife_capture.http_header.buf);
+
         if (knife_capture.knife_capture_submit)
             knife_capture.knife_capture_submit = false;
     }
@@ -341,7 +349,8 @@ void ethernet_data_received_callback(EthernetClient &stream)
                 knife_capture.ethernet_parse_all_received_data(json_doc);
 
                 printf("Remove request from queue\r\n");
-                knife_capture.request_list.pop();
+                if (knife_capture.request_list.size() > 0)
+                    knife_capture.request_list.pop();
 
                 printf("Post local data\r\n");
                 knife_capture.local_device_post_data();

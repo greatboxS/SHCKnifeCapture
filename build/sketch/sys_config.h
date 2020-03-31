@@ -60,6 +60,7 @@ void ethernet_init()
     knife_capture.ethernet_handle.init(ETHERNET_CS_PIN, ETHERNET_RST_PIN, ethernet_data_received_callback);
     //initialize ethernet module
     int exception = knife_capture.ethernet_handle.setting_up_ethernet_module();
+
     printf("Initialize ethernet module exception code: %d\r\n", exception);
     nex_send_message("Setting up done");
 }
@@ -353,8 +354,7 @@ void request_timeout_timer(TimerHandle_t pxTimer)
 {
     function_log();
     knife_capture.sys_requesting = false;
-    if (!InitializeFinish)
-        InitialRequestNow = true;
+    knife_capture.knife_capture_submit = false;
     xTimerStop(pxTimer, (TickType_t)0);
 }
 

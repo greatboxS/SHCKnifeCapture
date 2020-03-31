@@ -137,15 +137,16 @@ struct request_def
     char machine_name[16]{0};
     int knife_position = 0; //0left 1right
     int knife_type = 0;     //0old 1new
-    int retry_time = 5;
+    int retry_time = 10;
     int knife_picked = 0;
     char url[32]{0};
-    char data[128]{0};
+    char data[128*3]{0};
     bool valid = false;
     void clear()
     {
         memset(machine_name, 0, sizeof(machine_name));
         memset(url, 0, sizeof(url));
+        memset(data, 0, sizeof(data));
         knife_position = 0; //0left 1right
         knife_type = 0;     //0old 1new
         retry_time = 5;
@@ -155,7 +156,6 @@ struct request_def
     void update_request_pr(char *name, int device_id, int pos, int type, int knife_picker, int local_value)
     {
         function_log();
-
         printf("Counter value %d\r\n", local_value);
         valid = true;
         memccpy(machine_name, name, 0, sizeof(machine_name));
@@ -176,6 +176,16 @@ struct request_def
         snprintf(url, sizeof(url), "kc_api/capture");
 
         //snprintf(url, sizeof(url), "kc_api/%s/%d/%d/%d/%d/%d", machine_name, device_id, knife_position, knife_type, knife_picked, local_value);
+        printf("update new url: %s\rn", url);
+    }
+
+    void update_post_pr(char *new_url, char *new_data)
+    {
+        function_log();
+        valid = true;
+        memccpy(url, new_url, 0, sizeof(url));
+        memccpy(data, new_data, 0, sizeof(data));
+
         printf("update new url: %s\rn", url);
     }
 };
