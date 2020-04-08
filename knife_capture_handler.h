@@ -42,7 +42,7 @@ public:
 
     bool ethernet_queue_available()
     {
-        //printf("request_list.size() %d, sys_requesting %d, knife_capture_submit %d\r\n", request_list.size(), sys_requesting, knife_capture_submit);
+        printf("request_list.size() %d, sys_requesting %d, knife_capture_submit %d\r\n", request_list.size(), sys_requesting, knife_capture_submit);
         return (request_list.size() > 0 && !sys_requesting);
     }
 
