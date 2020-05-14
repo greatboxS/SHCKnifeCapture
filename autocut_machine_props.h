@@ -137,7 +137,7 @@ struct request_def
     char machine_name[16]{0};
     int knife_position = 0; //0left 1right
     int knife_type = 0;     //0old 1new
-    int retry_time = 10;
+    int retry_time = 100;
     int knife_picked = 0;
     char url[32]{0};
     char data[1024]{0};
@@ -165,6 +165,7 @@ struct request_def
         // submit type
         // machine_name/knife_position/knife_type/knife_picked/local_value
         DynamicJsonDocument jsondoc = DynamicJsonDocument(1024);
+        jsondoc["PostId"] = millis();
         jsondoc["MachineName"] = machine_name;
         jsondoc["DeviceId"] = device_id;
         jsondoc["KPos"] = pos;

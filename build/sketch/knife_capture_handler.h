@@ -80,7 +80,11 @@ public:
     {
         function_log();
         char url[256]{0};
-        String cmd = "kc_api/initial/";
+
+        sprintf(url,"kc_api/initial/%d/", millis());
+
+        String cmd = String(url);
+
         for (size_t i = 0; i < machine_handle.machines.size(); i++)
         {
             cmd += String(machine_handle.machines[i].m_name) + ",";
@@ -129,6 +133,7 @@ public:
             return;
 
         printf("Post all local data to server\r\n");
+        
         serialize_local_data();
 
         request_def new_request;
@@ -451,6 +456,7 @@ public:
 
         memset(http_header.buf, 0, sizeof(http_header.buf));
 
+        json_doc["PostId"] = millis();
         json_doc["KC_DeviceId"] = local_device_id;
         json_doc["EOP"] = "knife_capture";
         json_doc["CurrentTime"] = "";
