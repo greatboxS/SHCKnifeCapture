@@ -137,7 +137,7 @@ struct request_def
     char machine_name[16]{0};
     int knife_position = 0; //0left 1right
     int knife_type = 0;     //0old 1new
-    int retry_time = 100;
+    int retry_time = 20;
     int knife_picked = 0;
     char url[32]{0};
     char data[1024]{0};
